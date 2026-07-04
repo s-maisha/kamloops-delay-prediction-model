@@ -144,14 +144,19 @@ If you use the GCP Serverless pipeline, your raw realtime data is saved in a Goo
     ```bash
     pip install google-cloud-storage google-transit
     ```
-2.  Run [sync_gcs_to_sqlite.py](file:///home/marvellous/Projects/python/kamloops-delay-prediction-model/sync_gcs_to_sqlite.py) with the GCS bucket name to download and parse all collected `.pb` files directly into your local `gtfs.db`.
+2.  Run [sync_gcs_to_sqlite.py](file:///home/marvellous/Projects/python/kamloops-delay-prediction-model/sync_gcs_to_sqlite.py) to download and parse GCS files or a feed URL directly into your local `gtfs.db`.
 
-    **If you have GCP Credentials configured:**
+    **To sync using the default public trip updates URL:**
+    ```bash
+    python sync_gcs_to_sqlite.py
+    ```
+
+    **To sync from a custom bucket (with GCP Credentials):**
     ```bash
     python sync_gcs_to_sqlite.py <your-gcs-bucket-name>
     ```
 
-    **If you are a collaborator without GCP Credentials (Anonymous Sync):**
+    **To sync from a custom bucket anonymously:**
     ```bash
     python sync_gcs_to_sqlite.py <your-gcs-bucket-name> --anonymous
     ```
