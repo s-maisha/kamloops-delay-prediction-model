@@ -2,7 +2,7 @@ import os
 import sys
 import sqlite3
 import argparse
-from google.cloud import storage
+import requests
 from google.transit import gtfs_realtime_pb2
 
 DB_PATH = "gtfs.db"
@@ -183,6 +183,13 @@ def parse_and_save_vehicle_positions(content):
 def sync_bucket(bucket_name, prefix=None, anonymous=False):
     initialize_database()
     
+    try:
+        from google.cloud import storage
+    except ImportError:
+        print("Error: The 'google-cloud-storage' library is required to sync from a GCS bucket.")
+        print("Please install it using: pip install google-cloud-storage")
+        sys.exit(1)
+        
     if anonymous:
         print("Connecting to GCS anonymously...")
         storage_client = storage.Client.create_anonymous_client()
@@ -231,12 +238,54 @@ def sync_bucket(bucket_name, prefix=None, anonymous=False):
     print(f"  Added {trip_count} new trip update records (duplicates ignored).")
     print(f"  Added {vehicle_count} new vehicle position records (duplicates ignored).")
 
+def sync_url(url):
+    initialize_database()
+    print(f"Downloading {url}...")
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        content = response.content
+    except Exception as e:
+        print(f"Error downloading URL: {e}")
+        sys.exit(1)
+        
+    print(f"Downloaded {len(content)} bytes.")
+    
+    trip_count = 0
+    vehicle_count = 0
+    
+    # Check feed contents to determine update type
+    try:
+        feed = gtfs_realtime_pb2.FeedMessage()
+        feed.ParseFromString(content)
+        has_trip_update = any(entity.HasField('trip_update') for entity in feed.entity)
+        has_vehicle = any(entity.HasField('vehicle') for entity in feed.entity)
+        
+        if has_trip_update:
+            records = parse_and_save_trip_updates(content)
+            trip_count += records
+            print(f"Added {trip_count} new trip update records (duplicates ignored).")
+        if has_vehicle:
+            records = parse_and_save_vehicle_positions(content)
+            vehicle_count += records
+            print(f"Added {vehicle_count} new vehicle position records (duplicates ignored).")
+            
+        if not has_trip_update and not has_vehicle:
+            print("No trip updates or vehicle positions found in the feed.")
+            
+    except Exception as e:
+        print(f"Error parsing feed from URL: {e}")
+        sys.exit(1)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Sync GCS GTFS-RT data to local SQLite database.")
-    parser.add_argument("bucket_name", help="Name of the GCS bucket")
+    parser.add_argument("bucket_name", help="Name of the GCS bucket or a direct HTTP/HTTPS URL")
     parser.add_argument("--prefix", help="GCS prefix/folder path to filter files (optional)", default=None)
     parser.add_argument("--anonymous", "--anon", action="store_true", help="Connect anonymously without GCP credentials")
     
     args = parser.parse_args()
     
-    sync_bucket(args.bucket_name, prefix=args.prefix, anonymous=args.anonymous)
+    if args.bucket_name.startswith("http://") or args.bucket_name.startswith("https://"):
+        sync_url(args.bucket_name)
+    else:
+        sync_bucket(args.bucket_name, prefix=args.prefix, anonymous=args.anonymous)
