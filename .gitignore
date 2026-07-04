@@ -1,0 +1,24 @@
+# SQLite Database
+gtfs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+!*.tfvars.example
+
+# Local archives
+terraform/gcp/function.zip
+terraform/aws/lambda.zip
