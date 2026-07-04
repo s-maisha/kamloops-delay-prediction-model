@@ -1,6 +1,7 @@
 import os
 import sys
 import sqlite3
+import argparse
 from google.cloud import storage
 from google.transit import gtfs_realtime_pb2
 
@@ -179,9 +180,24 @@ def parse_and_save_vehicle_positions(content):
         print(f"Error parsing vehicle positions: {e}")
     return 0
 
-def sync_bucket(bucket_name, prefix=None):
+def sync_bucket(bucket_name, prefix=None, anonymous=False):
     initialize_database()
-    storage_client = storage.Client()
+    
+    if anonymous:
+        print("Connecting to GCS anonymously...")
+        storage_client = storage.Client.create_anonymous_client()
+    else:
+        try:
+            storage_client = storage.Client()
+        except Exception as e:
+            print(f"Failed to initialize authenticated GCS client: {e}")
+            print("Attempting to connect anonymously...")
+            try:
+                storage_client = storage.Client.create_anonymous_client()
+            except Exception as anon_err:
+                print(f"Error: Could not connect to GCS anonymously: {anon_err}")
+                sys.exit(1)
+                
     bucket = storage_client.bucket(bucket_name)
     
     print(f"Connecting to bucket '{bucket_name}'...")
@@ -216,11 +232,11 @@ def sync_bucket(bucket_name, prefix=None):
     print(f"  Added {vehicle_count} new vehicle position records (duplicates ignored).")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python sync_gcs_to_sqlite.py <gcs_bucket_name> [prefix]")
-        sys.exit(1)
-        
-    bucket_name = sys.argv[1]
-    prefix = sys.argv[2] if len(sys.argv) > 2 else None
+    parser = argparse.ArgumentParser(description="Sync GCS GTFS-RT data to local SQLite database.")
+    parser.add_argument("bucket_name", help="Name of the GCS bucket")
+    parser.add_argument("--prefix", help="GCS prefix/folder path to filter files (optional)", default=None)
+    parser.add_argument("--anonymous", "--anon", action="store_true", help="Connect anonymously without GCP credentials")
     
-    sync_bucket(bucket_name, prefix)
+    args = parser.parse_args()
+    
+    sync_bucket(args.bucket_name, prefix=args.prefix, anonymous=args.anonymous)

@@ -138,16 +138,23 @@ gcloud services enable \
 
 ### 5. Syncing Cloud Data to Local SQLite Database
 
-If you use the GCP Serverless pipeline, your raw realtime data is saved in a Google Cloud Storage (GCS) bucket. To bring this data down locally for modeling:
+If you use the GCP Serverless pipeline, your raw realtime data is saved in a Google Cloud Storage (GCS) bucket. Since the bucket is configured to be publicly readable, developers can bring this data down locally for modeling with or without GCP credentials:
 
-1.  Make sure you have configured GCP credentials on your local machine (`gcloud auth application-default login`).
-2.  Install the required dependencies:
+1.  Install the required dependencies:
     ```bash
     pip install google-cloud-storage google-transit
     ```
-3.  Run [sync_gcs_to_sqlite.py](file:///home/marvellous/Projects/python/kamloops-delay-prediction-model/sync_gcs_to_sqlite.py) with the GCS bucket name to download and parse all collected `.pb` files directly into your local `gtfs.db`:
+2.  Run [sync_gcs_to_sqlite.py](file:///home/marvellous/Projects/python/kamloops-delay-prediction-model/sync_gcs_to_sqlite.py) with the GCS bucket name to download and parse all collected `.pb` files directly into your local `gtfs.db`.
+
+    **If you have GCP Credentials configured:**
     ```bash
     python sync_gcs_to_sqlite.py <your-gcs-bucket-name>
     ```
+
+    **If you are a collaborator without GCP Credentials (Anonymous Sync):**
+    ```bash
+    python sync_gcs_to_sqlite.py <your-gcs-bucket-name> --anonymous
+    ```
+
     This script parses the feeds and uses `INSERT OR IGNORE` to insert records, safely ignoring any duplicates you already have in the database.
 

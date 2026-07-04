@@ -47,6 +47,13 @@ resource "google_storage_bucket" "gtfs_data" {
   }
 }
 
+# Grant public read access to the GCS bucket so collaborators can sync anonymously
+resource "google_storage_bucket_iam_member" "public_read" {
+  bucket = google_storage_bucket.gtfs_data.name
+  role   = "roles/storage.objectViewer"
+  member = "allUsers"
+}
+
 # Bucket for Cloud Function source archives
 resource "google_storage_bucket" "function_source" {
   name          = "${var.bucket_name}-function-source"
@@ -96,6 +103,13 @@ resource "google_cloudfunctions2_function" "gtfs_collector" {
       BUCKET_NAME = google_storage_bucket.gtfs_data.name
     }
   }
+
+  depends_on = [
+    google_project_iam_member.default_compute_builder,
+    google_project_iam_member.default_compute_storage_viewer,
+    google_project_iam_member.default_compute_artifact_writer,
+    google_project_iam_member.default_compute_logging_writer,
+  ]
 }
 
 # Create Service Account for Cloud Scheduler
@@ -138,4 +152,52 @@ resource "google_cloud_scheduler_job" "cron" {
       service_account_email = google_service_account.scheduler_sa.email
     }
   }
+}
+
+# -----------------------------------------------------------------------------
+# IAM Permissions for Default Compute Service Account (Build & Runtime)
+# -----------------------------------------------------------------------------
+
+# Retrieve project metadata to get the project number dynamically
+data "google_project" "project" {}
+
+# Grant the Cloud Build Service Account role to the default Compute Engine service account.
+# This resolves the "missing permission on the build service account" error when deploying
+# Gen 2 Cloud Functions in organizations with strict default service account policies.
+resource "google_project_iam_member" "default_compute_builder" {
+  project = var.project_id
+  role    = "roles/cloudbuild.builds.builder"
+  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
+# Grant Storage Object Viewer to the default Compute Engine service account
+# to read the zipped Cloud Function code during building.
+resource "google_project_iam_member" "default_compute_storage_viewer" {
+  project = var.project_id
+  role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
+# Grant Artifact Registry Writer to the default Compute Engine service account
+# to push the built container image to Artifact Registry.
+resource "google_project_iam_member" "default_compute_artifact_writer" {
+  project = var.project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
+# Grant Logs Writer to the default Compute Engine service account
+# so the build and the function runtime can write logs to Cloud Logging.
+resource "google_project_iam_member" "default_compute_logging_writer" {
+  project = var.project_id
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
+# Grant Storage Object Creator role on the GTFS data bucket to the default Compute Engine
+# service account, allowing the Cloud Function to upload collected feed data at runtime.
+resource "google_storage_bucket_iam_member" "default_compute_gcs_writer" {
+  bucket = google_storage_bucket.gtfs_data.name
+  role   = "roles/storage.objectCreator"
+  member = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
 }
