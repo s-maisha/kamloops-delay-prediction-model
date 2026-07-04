@@ -28,6 +28,7 @@ def initialize_database():
             "departure_time" INTEGER,
             PRIMARY KEY ("trip_id", "stop_sequence", "feed_timestamp"),
             FOREIGN KEY ("trip_id") REFERENCES "trips" ("trip_id"),
+            FOREIGN KEY ("route_id") REFERENCES "routes" ("route_id"),
             FOREIGN KEY ("stop_id") REFERENCES "stops" ("stop_id")
         )
     """)
@@ -48,7 +49,10 @@ def initialize_database():
             "current_status" TEXT,
             "current_stop_sequence" INTEGER,
             "stop_id" TEXT,
-            PRIMARY KEY ("vehicle_id", "feed_timestamp")
+            PRIMARY KEY ("vehicle_id", "feed_timestamp"),
+            FOREIGN KEY ("trip_id") REFERENCES "trips" ("trip_id"),
+            FOREIGN KEY ("route_id") REFERENCES "routes" ("route_id"),
+            FOREIGN KEY ("stop_id") REFERENCES "stops" ("stop_id")
         )
     """)
 
