@@ -1,0 +1,15 @@
+﻿route_id,route_short_name,route_long_name,route_type,route_color,route_text_color
+1-KAM,1,Tranquille,3,004B8D,FFFFFF
+2-KAM,2,Parkcrest,3,8CC63F,FFFFFF
+3-KAM,3,Westsyde,3,F37421,FFFFFF
+4-KAM,4,Pacific Way,3,00AEEF,FFFFFF
+5-KAM,5,Pineview,3,FCAF17,FFFFFF
+6-KAM,6,Downtown Loop,3,00AA47,FFFFFF
+7-KAM,7,Aberdeen,3,ED1D8F,FFFFFF
+9-KAM,9,Gleneagles,3,8177B7,FFFFFF
+10-KAM,10,North Shore TRU Express,3,49176B,FFFFFF
+13-KAM,13,Yellowhead,3,B2BB1E,FFFFFF
+14-KAM,14,Batchelor Heights,3,4F6F19,FFFFFF
+16-KAM,16,Juniper Ridge,3,77AF99,FFFFFF
+17-KAM,17,Dallas,3,E270AB,FFFFFF
+18-KAM,18,Mt. Paul,3,5D87A1,FFFFFF
